@@ -2,7 +2,7 @@ package info.xert.gecko_view_flutter.delegate
 
 import org.mozilla.geckoview.GeckoSession
 
-class WrappedNavigationDelegate: GeckoSession.NavigationDelegate {
+class FlutterNavigationDelegate: GeckoSession.NavigationDelegate {
     var currentUrl: String? = null
         private set
 
