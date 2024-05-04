@@ -5,12 +5,45 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
+import info.xert.gecko_view_flutter.common.InputStructure
+import info.xert.gecko_view_flutter.common.Offset
+import info.xert.gecko_view_flutter.common.Position
 import info.xert.gecko_view_flutter.handler.ChoicePromptRequest
 import info.xert.gecko_view_flutter.handler.PromptHandler
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
+
+private class NoArgumentException(message: String? = null, cause: Throwable? = null)
+    : Exception(message, cause)
+
+private class InvalidArgumentException(message: String? = null, cause: Throwable? = null)
+    : Exception(message, cause)
+private fun <T> tryExtractSingleArgument(call: MethodCall, nodeName: String): T {
+    if (!call.hasArgument(nodeName)) {
+        throw NoArgumentException("No $nodeName provided")
+    } else {
+        try {
+            return call.argument<T>(nodeName)!!
+        } catch (e: ClassCastException) {
+            throw InvalidArgumentException("Invalid type for $nodeName provided")
+        }
+    }
+}
+
+private fun <T> tryExtractStructure(call: MethodCall, nodeName: String, companion: InputStructure<T>): T {
+    if (!call.hasArgument(nodeName)) {
+        throw NoArgumentException("No $nodeName provided")
+    } else {
+        try {
+            val structureMap = call.argument<Map<*, *>>(nodeName)!!
+            return companion.fromMap(structureMap)
+        } catch (e: ClassCastException) {
+            throw InvalidArgumentException("Invalid type for $nodeName provided")
+        }
+    }
+}
 
 class GeckoViewProxy(
         context: Context,
@@ -45,58 +78,88 @@ class GeckoViewProxy(
     private val onTabMethodCall =
         object : MethodChannel.MethodCallHandler {
             override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-                val tabId = call.argument<Int>("tabId")
-                if (tabId == null) {
-                    result.error("Argument error", "No tab id provided", null)
-                    return
-                }
+                try {
+                    val tabId = tryExtractSingleArgument<Int>(call, "tabId")
 
-                when (call.method) {
-                    "isActive" -> {
-                        result.success(instance.isTabActive(tabId))
-                    }
+                    when (call.method) {
+                        "isActive" -> {
+                            result.success(instance.isTabActive(tabId))
+                        }
 
-                    "activate" -> {
-                        instance.activateTab(tabId)
-                    }
+                        "activate" -> {
+                            instance.activateTab(tabId)
+                            result.success(true)
+                        }
 
-                    "getCurrentUrl" -> {
-                        result.success(instance.currentUrl(tabId))
-                    }
+                        "getCurrentUrl" -> {
+                            result.success(instance.currentUrl(tabId))
+                        }
 
-                    "getTitle" -> {
-                        result.success(instance.currentUrl(tabId))
-                    }
+                        "getTitle" -> {
+                            result.success(instance.currentUrl(tabId))
+                        }
 
-                    "getUserAgent" -> {
-                        result.success(instance.getUserAgent(tabId))
-                    }
+                        "getUserAgent" -> {
+                            result.success(instance.getUserAgent(tabId))
+                        }
 
-                    "openURI" -> {
-                        val uri = call.argument<String>("uri")
-                        if (uri == null) {
-                            result.error("Argument error", "No uri provided", null)
-                            return
-                        } else {
+                        "openURI" -> {
+                            val uri = tryExtractSingleArgument<String>(call, "uri")
                             instance.openURI(tabId, uri)
+                            result.success(true)
+                        }
+
+                        "reload" -> {
+                            instance.reload(tabId)
+                            result.success(true)
+                        }
+
+                        "goBack" -> {
+                            instance.goBack(tabId)
+                            result.success(true)
+                        }
+
+                        "goForward" -> {
+                            instance.goForward(tabId)
+                            result.success(true)
+                        }
+
+                        "getScrollOffset" -> {
+                            result.success(instance.getScrollOffset(tabId).toMap())
+                        }
+
+                        "scrollToBottom" -> {
+                            instance.scrollToBottom(tabId)
+                            result.success(true)
+                        }
+
+                        "scrollToTop" -> {
+                            instance.scrollToTop(tabId)
+                            result.success(true)
+                        }
+
+                        "scrollBy" -> {
+                            val offset = tryExtractStructure<Offset>(call, "offset", Offset)
+                            val smooth = tryExtractSingleArgument<Boolean>(call, "smooth")
+                            instance.scrollBy(tabId, offset, smooth)
+                            result.success(true)
+                        }
+
+                        "scrollTo" -> {
+                            val position = tryExtractStructure(call, "position", Position)
+                            val smooth = tryExtractSingleArgument<Boolean>(call, "smooth")
+                            instance.scrollTo(tabId, position, smooth)
+                            result.success(true)
+                        }
+
+                        else -> {
+                            result.notImplemented()
                         }
                     }
-
-                    "reload" -> {
-                        instance.reload(tabId)
-                    }
-
-                    "goBack" -> {
-                        instance.goBack(tabId)
-                    }
-
-                    "goForward" -> {
-                        instance.goForward(tabId)
-                    }
-
-                    else -> {
-                        result.notImplemented()
-                    }
+                } catch (e: InvalidArgumentException) {
+                    result.error("Invalid argument error", e.message, null)
+                } catch (e: NoArgumentException) {
+                    result.error("No argument error", e.message, null)
                 }
             }
         }

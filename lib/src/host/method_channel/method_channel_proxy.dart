@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:gecko_view_flutter/src/common/position.dart';
 import 'package:gecko_view_flutter/src/host/method_channel/method_channel_prompt_handler.dart';
 
 
@@ -104,5 +105,32 @@ class MethodChannelProxy {
 
   Future<void> goForward(int viewId, int tabId) async {
     await invokeMethodForTab<void>(viewId, tabId, "goForward", {});
+  }
+
+  Future<GeckoOffset> getScrollOffset(int viewId, int tabId) async {
+    final result = await invokeMethodForTab<Map<Object?, Object?>>(viewId, tabId, "getScrollOffset", {});
+    return GeckoOffset.fromMap(result!);
+  }
+
+  Future<void> scrollToBottom(int viewId, int tabId) async {
+    await invokeMethodForTab(viewId, tabId, "scrollToBottom", {});
+  }
+
+  Future<void> scrollToTop(int viewId, int tabId) async {
+    await invokeMethodForTab(viewId, tabId, "scrollToTop", {});
+  }
+
+  Future<void> scrollBy(int viewId, int tabId, GeckoOffset offset, bool smooth) async {
+    await invokeMethodForTab(viewId, tabId, "scrollBy", {
+      "smooth": smooth,
+      "offset": offset.toMap()
+    });
+  }
+
+  Future<void> scrollTo(int viewId, int tabId, GeckoPosition position, bool smooth) async {
+    await invokeMethodForTab(viewId, tabId, "scrollTo", {
+      "smooth": smooth,
+      "position": position.toMap()
+    });
   }
 }

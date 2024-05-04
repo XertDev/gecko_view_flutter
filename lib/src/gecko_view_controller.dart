@@ -1,3 +1,4 @@
+import 'common/position.dart';
 import 'delegate/prompt_delegate.dart';
 
 import 'package:flutter/foundation.dart';
@@ -123,6 +124,26 @@ class GeckoTabController {
 
   Future<void> goForward() async {
     await MethodChannelProxy.instance.goForward(_viewId, _tabId);
+  }
+
+  Future<GeckoOffset> getScrollOffset() async {
+    return await MethodChannelProxy.instance.getScrollOffset(_viewId, _tabId);
+  }
+
+  Future<void> scrollToBottom() async {
+    await MethodChannelProxy.instance.scrollToBottom(_viewId, _tabId);
+  }
+
+  Future<void> scrollToTop() async {
+    await MethodChannelProxy.instance.scrollToTop(_viewId, _tabId);
+  }
+
+  Future<void> scrollBy(GeckoOffset offset, bool smooth) async {
+    await MethodChannelProxy.instance.scrollBy(_viewId, _tabId, offset, smooth);
+  }
+
+  Future<void> scrollTo(GeckoPosition position, bool smooth) async {
+    await MethodChannelProxy.instance.scrollTo(_viewId, _tabId, position, smooth);
   }
 }
 
