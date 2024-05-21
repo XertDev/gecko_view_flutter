@@ -1,51 +1,47 @@
 package info.xert.gecko_view_flutter
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
-import android.view.View
 import info.xert.gecko_view_flutter.common.Offset
 import info.xert.gecko_view_flutter.common.Position
+import info.xert.gecko_view_flutter.common.ResultConsumer
 import info.xert.gecko_view_flutter.delegate.FlutterPromptDelegate
 import info.xert.gecko_view_flutter.delegate.FlutterNavigationDelegate
 import info.xert.gecko_view_flutter.delegate.FlutterScrollDelegate
+import org.json.JSONObject
+import org.mozilla.geckoview.GeckoResult
 
-import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 
 import org.mozilla.geckoview.GeckoView;
 import org.mozilla.geckoview.PanZoomController.SCROLL_BEHAVIOR_AUTO
 import org.mozilla.geckoview.PanZoomController.SCROLL_BEHAVIOR_SMOOTH
 import org.mozilla.geckoview.ScreenLength
+import org.mozilla.geckoview.WebExtension
+import org.mozilla.geckoview.WebExtension.MessageDelegate
 
-internal class GeckoViewInstance(context: Context, private val proxy: GeckoViewProxy) {
-    companion object {
-        private var runtime: GeckoRuntime? = null;
-
-        fun getRuntime(context: Context): GeckoRuntime {
-            if(runtime == null) {
-                runtime = GeckoRuntime.create(context)
-            }
-
-            return runtime!!
-        }
-    }
+internal class GeckoViewInstance(context: Context,
+                                 private val runtimeController: GeckoRuntimeController,
+                                 private val proxy: GeckoViewProxy) {
 
     private val TAG: String = GeckoViewInstance::class.java.name
 
     private val viewContext: Context
 
-    private val view: GeckoView
-    private val sessions: MutableMap<Int, GeckoSession> = HashMap();
+    val view: GeckoView
 
-    fun getView(): View {
-        return view
-    }
+    data class SessionWrapper(val session: GeckoSession, var tabId: Int?)
+    private val sessions: MutableMap<Int, SessionWrapper> = HashMap()
+
 
     init {
         Log.d(TAG, "Initializing GeckoView")
 
-        view = GeckoView(context)
         viewContext = context
+
+        view = GeckoView(viewContext)
     }
 
     fun init() {
@@ -57,13 +53,51 @@ internal class GeckoViewInstance(context: Context, private val proxy: GeckoViewP
         }
 
         val session = GeckoSession();
-        sessions[tabId] = session;
+        sessions[tabId] = SessionWrapper(session, null)
 
-        session.promptDelegate = FlutterPromptDelegate(proxy);
-        session.scrollDelegate = FlutterScrollDelegate();
+        session.promptDelegate = FlutterPromptDelegate(proxy)
+        session.scrollDelegate = FlutterScrollDelegate()
         session.navigationDelegate = FlutterNavigationDelegate()
+        session.permissionDelegate = object : GeckoSession.PermissionDelegate {
+            override fun onContentPermissionRequest(
+                    session: GeckoSession,
+                    perm: GeckoSession.PermissionDelegate.ContentPermission
+            ): GeckoResult<Int>? {
+                return super.onContentPermissionRequest(session, perm)
+            }
+        }
 
-        session.open(getRuntime(viewContext));
+        if (runtimeController.tabDataInitializer.enabled) {
+            val extension = runtimeController.tabDataInitializer.extension
+            if (extension != null) {
+                Handler(Looper.getMainLooper()).post {
+                    session.webExtensionController.setMessageDelegate(extension, object : MessageDelegate {
+                        override fun onMessage(nativeApp: String, message: Any, sender: WebExtension.MessageSender): GeckoResult<Any>? {
+                            val sessionWrapper = sessions[tabId]!!
+                            if (sessionWrapper.tabId == null) {
+                                val jsonMessage = message as JSONObject
+
+                                if (jsonMessage.getString("type") == "tabId") {
+                                    sessionWrapper.tabId = jsonMessage.getInt("value")
+                                }
+                            }
+                            return null
+                        }
+                    }, "browser")
+                }
+            }
+        }
+
+        session.open(runtimeController.getRuntime());
+    }
+
+    fun getActiveTabId(): Int? {
+        val tabEntry = sessions.entries.firstOrNull { entry -> entry.value.session == view.session }
+        if (tabEntry != null) {
+            return tabEntry.key
+        }
+
+        return null
     }
 
     private fun getSessionByTabId(tabId: Int): GeckoSession {
@@ -71,8 +105,17 @@ internal class GeckoViewInstance(context: Context, private val proxy: GeckoViewP
             throw InternalError("Tab does not exist")
         }
 
-        return sessions[tabId]!!
+        return sessions[tabId]!!.session
     }
+
+    private fun getInternalTabIdByTabId(tabId: Int): Int? {
+        if(!sessions.containsKey(tabId)) {
+            throw InternalError("Tab does not exist")
+        }
+
+        return sessions[tabId]!!.tabId
+    }
+
 
     fun isTabActive(tabId: Int): Boolean {
         val session = getSessionByTabId(tabId)
@@ -153,5 +196,11 @@ internal class GeckoViewInstance(context: Context, private val proxy: GeckoViewP
                 ScreenLength.fromPixels(position.x.toDouble()),
                 ScreenLength.fromPixels(position.y.toDouble()),
                 if (smooth) SCROLL_BEHAVIOR_SMOOTH else SCROLL_BEHAVIOR_AUTO)
+    }
+
+    fun runJsAsync(tabId: Int, script: String) {
+        val tabId = getInternalTabIdByTabId(tabId)
+                ?: throw InternalError("Invalid session state! TabId not initialized");
+        runtimeController.hostJsExecutor.runAsync(script, tabId)
     }
 }

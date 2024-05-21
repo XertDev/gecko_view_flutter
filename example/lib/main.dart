@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:gecko_view_flutter/gecko_view_flutter.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await GeckoViewFlutter.enableHostJSExecution();
+
   runApp(const MyApp());
 }
 
@@ -18,7 +21,8 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void initState() {
-    super.initState();}
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +34,11 @@ class _MyAppState extends State<MyApp> {
         body: GeckoView(
           onGeckoViewCreated: (controller) async {
             this.controller = controller;
+            await this.controller?.createTab();
+            await this.controller?.createTab();
             tab = await this.controller?.createTab();
             tab?.activate();
-            tab?.openURI(Uri.parse("https://www.w3schools.com/tags/tag_select.asp"));
+            await tab?.openURI(Uri.parse('https://dart.dev/'));
           },
         ),
         bottomNavigationBar: BottomAppBar(
@@ -58,6 +64,28 @@ class _MyAppState extends State<MyApp> {
                 },
               )
             ]
+          ),
+        ),
+        drawer: Drawer(
+          child: ListView(
+            // Important: Remove any padding from the ListView.
+            padding: EdgeInsets.zero,
+            children: [
+              const DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                ),
+                child: Text('Additional features'),
+              ),
+              ListTile(
+                title: const Text('Run JS async'),
+                onTap: () async {
+                  final activeTab = await controller?.getActiveTab();
+                  final javascriptController = activeTab?.javascriptController();
+                  javascriptController?.runAsync('alert("test")');
+                },
+              ),
+            ],
           ),
         ),
       ),

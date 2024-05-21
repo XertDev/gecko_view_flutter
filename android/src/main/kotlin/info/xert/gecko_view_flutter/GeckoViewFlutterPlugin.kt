@@ -1,5 +1,6 @@
 package info.xert.gecko_view_flutter
 
+import android.content.Context
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.FlutterPlugin.FlutterPluginBinding
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -9,32 +10,33 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 
 /** GeckoViewFlutterPlugin */
-class GeckoViewFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
+class GeckoViewFlutterPlugin: FlutterPlugin, ActivityAware {
+
     private lateinit var pluginBinding: FlutterPluginBinding
-    private lateinit var channel: MethodChannel
 
-    override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-        if (call.method == "getPlatformVersion") {
-            result.success("Android ${android.os.Build.VERSION.RELEASE}")
-        } else {
-            result.notImplemented()
-        }
-    }
+    private lateinit var context: Context
 
-    override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+    private lateinit var runtimeController: GeckoRuntimeController
+    private var proxy: GeckoProxy? = null
+
+    override fun onAttachedToEngine(binding: FlutterPluginBinding) {
         pluginBinding = binding
 
-        channel = MethodChannel(binding.binaryMessenger, "gecko_view_flutter")
-        channel.setMethodCallHandler(this);
+        context = binding.applicationContext
+        runtimeController = GeckoRuntimeController(context, binding.flutterAssets)
+        proxy = GeckoProxy(binding.binaryMessenger, runtimeController)
     }
 
-    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        channel.setMethodCallHandler(null)
+    override fun onDetachedFromEngine(binding: FlutterPluginBinding) {
+        if(proxy != null) {
+            proxy!!.dispose()
+            proxy = null
+        }
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         pluginBinding.platformViewRegistry.registerViewFactory(
-                "gecko_view", GeckoViewFactory(pluginBinding.binaryMessenger)
+                "gecko_view", GeckoViewFactory(pluginBinding.binaryMessenger, runtimeController)
         )
     }
 
@@ -47,7 +49,10 @@ class GeckoViewFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     override fun onDetachedFromActivity() {
-        channel.setMethodCallHandler(null)
+        if(proxy != null) {
+            proxy!!.dispose()
+            proxy = null
+        }
     }
 
 }

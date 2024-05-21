@@ -1,6 +1,6 @@
 package info.xert.gecko_view_flutter.handler
 
-import info.xert.gecko_view_flutter.GeckoViewProxy
+import info.xert.gecko_view_flutter.common.ResultConsumer
 
 data class ChoicePromptRequest(
         val title: String?,
@@ -41,5 +41,5 @@ data class ChoicePromptRequest(
 }
 
 interface PromptHandler {
-    fun onChoicePrompt(request: ChoicePromptRequest, callback: GeckoViewProxy.Result)
+    fun onChoicePrompt(request: ChoicePromptRequest, callback: ResultConsumer<Any?>)
 }

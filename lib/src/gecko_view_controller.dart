@@ -79,16 +79,40 @@ class _GeckoViewState extends State<GeckoView>
   }
 }
 
-class GeckoTabController {
+class GeckoJavascriptController {
   final int _viewId;
   final int _tabId;
 
-  GeckoTabController._(
+  GeckoJavascriptController._(
       this._viewId,
       this._tabId
       );
 
-  PromptDelegate promptDelegate = FlutterPromptDelegate();
+  Future<void> runAsync(String script) async {
+    await MethodChannelProxy.instance.runJSAsync(_viewId, _tabId, script);
+  }
+}
+
+class GeckoTabController {
+  final int _viewId;
+  final int _tabId;
+
+  late final GeckoJavascriptController _javascriptController;
+
+  GeckoTabController._(
+      this._viewId,
+      this._tabId
+      ) {
+    _javascriptController = GeckoJavascriptController._(_viewId, _tabId);
+  }
+
+  int id() {
+    return _tabId;
+  }
+
+  GeckoJavascriptController javascriptController() {
+    return _javascriptController;
+  }
 
   Future<bool> isActive() async {
     return await MethodChannelProxy.instance.isTabActive(_viewId, _tabId);
@@ -182,9 +206,18 @@ class GeckoViewController {
     ++_nextTabId;
 
     await MethodChannelProxy.instance.createTab(_id, tabId);
-    final tab =  GeckoTabController._(_id, tabId);
+    final tab = GeckoTabController._(_id, tabId);
     _tabs.add(tab);
     return tab;
+  }
+
+  Future<GeckoTabController?> getActiveTab() async {
+    final activeId = await MethodChannelProxy.instance.getActiveTab(_id);
+    if (activeId != null) {
+      return _tabs.firstWhere((tab) => tab.id() == activeId);
+    }
+
+    return null;
   }
 
   Future<ChoicePromptResponse> onChoicePrompt(ChoicePromptRequest request) async {

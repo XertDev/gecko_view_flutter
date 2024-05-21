@@ -1,6 +1,7 @@
 package info.xert.gecko_view_flutter.delegate
 
 import info.xert.gecko_view_flutter.GeckoViewProxy
+import info.xert.gecko_view_flutter.common.ResultConsumer
 import info.xert.gecko_view_flutter.handler.ChoicePromptRequest
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoSession
@@ -34,7 +35,7 @@ class FlutterPromptDelegate(private val proxy: GeckoViewProxy): GeckoSession.Pro
         val response: GeckoResult<PromptResponse> = GeckoResult<PromptResponse>()
 
         val request: ChoicePromptRequest = geckoChoicePromptToRequest(prompt)
-        proxy.onChoicePrompt(request, object: GeckoViewProxy.Result {
+        proxy.onChoicePrompt(request, object: ResultConsumer<Any?> {
             override fun success(result: Any?) {
                 val responseMap = result as Map<*, *>
                 if(responseMap["confirmed"] as Boolean) {
