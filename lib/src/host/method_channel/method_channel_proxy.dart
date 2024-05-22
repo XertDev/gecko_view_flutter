@@ -13,6 +13,10 @@ class MethodChannelProxy {
 
   static String channelPrefix = "gecko_view_flutter";
 
+  static MethodChannel openChannel() {
+    return MethodChannel(channelPrefix);
+  }
+
   static MethodChannel openViewChannel(int viewId) {
     return MethodChannel('${channelPrefix}_$viewId');
   }
@@ -63,6 +67,16 @@ class MethodChannelProxy {
       await channel.invokeMethod<void>("createTab", {
         "tabId": tabId
       });
+    } on PlatformException catch (e) {
+      debugPrint("${e.code}: ${e.message}");
+      rethrow;
+    }
+  }
+
+  Future<int?> getActiveTab(int viewId) async {
+    try {
+      var channel = openViewChannel(viewId);
+      return await channel.invokeMethod<int>("getActiveTab", {});
     } on PlatformException catch (e) {
       debugPrint("${e.code}: ${e.message}");
       rethrow;
@@ -132,5 +146,31 @@ class MethodChannelProxy {
       "smooth": smooth,
       "position": position.toMap()
     });
+  }
+
+  Future<void> enableHostJSExecution() async {
+    try {
+      var channel = openChannel();
+      await channel.invokeMethod<void>("enableHostJSExecution", {});
+    } on PlatformException catch (e) {
+      debugPrint("${e.code}: ${e.message}");
+      rethrow;
+    }
+  }
+
+  Future<void> runJSAsync(int viewId, int tabId, String script) async {
+    await invokeMethodForTab(viewId, tabId, "runJSAsync", {
+      "script": script
+    });
+  }
+
+  Future<String> getPlatformVersion() async {
+    try {
+      var channel = openChannel();
+      return (await channel.invokeMethod<String>("getPlatformVersion"))!;
+    } on PlatformException catch (e) {
+      debugPrint("${e.code}: ${e.message}");
+      rethrow;
+    }
   }
 }

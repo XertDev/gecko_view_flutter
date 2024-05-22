@@ -38,10 +38,9 @@ flutter:
         package: info.xert.gecko_view_flutter
         pluginClass: GeckoViewFlutterPlugin
 
-  # To add assets to your plugin package, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/webextension/host_js_execution/
+    - assets/webextension/tab_data_initializer/
   #
   # For details regarding assets in packages, see
   # https://flutter.dev/assets-and-images/#from-packages

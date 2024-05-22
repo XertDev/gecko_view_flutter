@@ -1,0 +1,29 @@
+{
+  "manifest_version": 2,
+  "name": "tab-data-initializer",
+  "version": "1.0",
+  "description": "Tab data initializer",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "tab-data-initializer@xert.info"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["file:///*" , "<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "permissions": [
+    "nativeMessaging",
+    "nativeMessagingFromContent",
+    "geckoViewAddons",
+    "tabs",
+    "<all_urls>"
+  ]
+}

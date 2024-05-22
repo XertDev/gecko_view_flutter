@@ -5,9 +5,14 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
-import info.xert.gecko_view_flutter.common.InputStructure
+import info.xert.gecko_view_flutter.common.InvalidArgumentException
+import info.xert.gecko_view_flutter.common.NoArgumentException
 import info.xert.gecko_view_flutter.common.Offset
 import info.xert.gecko_view_flutter.common.Position
+import info.xert.gecko_view_flutter.common.ResultConsumer
+import info.xert.gecko_view_flutter.common.tryExtractSingleArgument
+import info.xert.gecko_view_flutter.common.tryExtractStructure
+import info.xert.gecko_view_flutter.common.unitResultConsumer
 import info.xert.gecko_view_flutter.handler.ChoicePromptRequest
 import info.xert.gecko_view_flutter.handler.PromptHandler
 import io.flutter.plugin.common.BinaryMessenger
@@ -15,46 +20,16 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 
-private class NoArgumentException(message: String? = null, cause: Throwable? = null)
-    : Exception(message, cause)
 
-private class InvalidArgumentException(message: String? = null, cause: Throwable? = null)
-    : Exception(message, cause)
-private fun <T> tryExtractSingleArgument(call: MethodCall, nodeName: String): T {
-    if (!call.hasArgument(nodeName)) {
-        throw NoArgumentException("No $nodeName provided")
-    } else {
-        try {
-            return call.argument<T>(nodeName)!!
-        } catch (e: ClassCastException) {
-            throw InvalidArgumentException("Invalid type for $nodeName provided")
-        }
-    }
-}
-
-private fun <T> tryExtractStructure(call: MethodCall, nodeName: String, companion: InputStructure<T>): T {
-    if (!call.hasArgument(nodeName)) {
-        throw NoArgumentException("No $nodeName provided")
-    } else {
-        try {
-            val structureMap = call.argument<Map<*, *>>(nodeName)!!
-            return companion.fromMap(structureMap)
-        } catch (e: ClassCastException) {
-            throw InvalidArgumentException("Invalid type for $nodeName provided")
-        }
-    }
-}
 
 class GeckoViewProxy(
         context: Context,
+        runtimeManager: GeckoRuntimeController,
         messenger: BinaryMessenger,
         id: Int)
     : PlatformView, MethodChannel.MethodCallHandler, PromptHandler {
 
-    interface Result {
-        fun success(result: Any?)
-        fun error(errorCode: String, errorMessage: String?, errorDetails: Any?)
-    }
+
 
     private val TAG: String = GeckoViewInstance::class.java.name
 
@@ -66,7 +41,7 @@ class GeckoViewProxy(
 
     init {
         Log.d(TAG, "Initializing GeckoView")
-        instance = GeckoViewInstance(context, this)
+        instance = GeckoViewInstance(context, runtimeManager, this)
     }
 
     private fun invokeMethodUIThread(channel: MethodChannel, method: String, data: Map<String, Any?>, callback: MethodChannel.Result) {
@@ -152,6 +127,12 @@ class GeckoViewProxy(
                             result.success(true)
                         }
 
+                        "runJSAsync" -> {
+                            val script = tryExtractSingleArgument<String>(call, "script")
+                            instance.runJsAsync(tabId, script)
+                            result.success(true)
+                        }
+
                         else -> {
                             result.notImplemented()
                         }
@@ -165,25 +146,32 @@ class GeckoViewProxy(
         }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-        when (call.method) {
-            "init" -> {
-                instance.init()
-                result.success(true)
-            }
+        try {
+            when (call.method) {
+                "init" -> {
+                    instance.init()
+                    result.success(true)
+                }
 
-            "createTab" -> {
-                val tabId = call.argument<Int>("tabId")
-                if(tabId != null) {
+                "createTab" -> {
+                    val tabId = tryExtractSingleArgument<Int>(call, "tabId")
                     instance.createTab(tabId)
                     result.success(true)
-                } else {
-                    result.error("Argument error", "No tab id provided", null)
+                }
+
+                "getActiveTab" -> {
+                    val currentTab = instance.getActiveTabId()
+                    result.success(currentTab)
+                }
+
+                else -> {
+                    result.notImplemented()
                 }
             }
-
-            else -> {
-                result.notImplemented()
-            }
+        } catch (e: InvalidArgumentException) {
+            result.error("Invalid argument error", e.message, null)
+        } catch (e: NoArgumentException) {
+            result.error("No argument error", e.message, null)
         }
     }
 
@@ -195,13 +183,13 @@ class GeckoViewProxy(
     }
 
     override fun getView(): View {
-        return instance.getView()
+        return instance.view
     }
 
     override fun dispose() {
     }
 
-    override fun onChoicePrompt(request: ChoicePromptRequest, callback: GeckoViewProxy.Result) {
+    override fun onChoicePrompt(request: ChoicePromptRequest, callback: ResultConsumer<Any?>) {
         invokeMethodUIThread(promptChannel, "choicePrompt", request.toMap(), object: MethodChannel.Result {
             override fun success(result: Any?) {
                 callback.success(result)
