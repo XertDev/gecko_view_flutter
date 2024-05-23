@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:gecko_view_flutter/src/host/prompt_handler.dart';
 
 abstract class PromptDelegate {
   Future<ChoicePromptResponse> onChoicePrompt(BuildContext context, ChoicePromptRequest request);
+  Future<void> onAlertPrompt(BuildContext context, AlertPromptRequest request);
 }
 
 class FlutterPromptDelegate extends PromptDelegate {
@@ -86,5 +89,36 @@ class FlutterPromptDelegate extends PromptDelegate {
       default:
         return ChoicePromptResponse.dismissed();
     }
+  }
+
+  @override
+  Future<void> onAlertPrompt(BuildContext context, AlertPromptRequest request) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        List<String> lines = List.empty();
+        if(request.message != null) {
+          const LineSplitter splitter = LineSplitter();
+          lines = splitter.convert(request.message!);
+        }
+
+        return AlertDialog(
+            title: request.title != null ? Text(request.title!) : null,
+            content: SingleChildScrollView(
+              child: ListBody(
+                children: lines.map((line) => Text(line)).toList(),
+              ),
+            ),
+          actions: [
+            TextButton(
+              child: const Text("Dismiss"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            )
+          ],
+        );
+      },
+    );
   }
 }

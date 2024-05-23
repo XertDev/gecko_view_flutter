@@ -64,10 +64,26 @@ class ChoicePromptResponse {
   };
 }
 
+class AlertPromptRequest {
+  final String? title;
+  final String? message;
+
+  AlertPromptRequest(this.title, this.message);
+
+  AlertPromptRequest.fromMap(Map<Object?, Object?> map)
+    : title = map["title"] as String?,
+      message = map["message"] as String?;
+}
+
 typedef ChoicePromptHandler = Future<ChoicePromptResponse> Function(ChoicePromptRequest);
+typedef AlertPromptHandler = Future<void> Function(AlertPromptRequest);
 
 class PromptHandler {
   ChoicePromptHandler onChoicePrompt = (_) async {
+    throw UnimplementedError("Not implemented");
+  };
+
+  AlertPromptHandler onAlertPrompt = (_) async {
     throw UnimplementedError("Not implemented");
   };
 }

@@ -198,6 +198,8 @@ class GeckoViewController {
   PromptHandler initPromptHandler() {
     final handler = MethodChannelProxy.instance.registerPromptHandler(_id);
     handler.onChoicePrompt = onChoicePrompt;
+    handler.onAlertPrompt = onAlertPrompt;
+
     return handler;
   }
 
@@ -222,5 +224,9 @@ class GeckoViewController {
 
   Future<ChoicePromptResponse> onChoicePrompt(ChoicePromptRequest request) async {
     return await promptDelegate.onChoicePrompt(_context, request);
+  }
+
+  Future<void> onAlertPrompt(AlertPromptRequest request) async {
+    return await promptDelegate.onAlertPrompt(_context, request);
   }
 }
