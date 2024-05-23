@@ -20,6 +20,16 @@ class MethodChannelPromptHandler extends PromptHandler{
           catch(e) {
             debugPrint(e.toString());
           }
+
+        case "alertPrompt":
+          try {
+            final request = AlertPromptRequest.fromMap(
+                call.arguments as Map<Object?, Object?>);
+            await onAlertPrompt(request);
+          }
+          catch(e) {
+            debugPrint(e.toString());
+          }
       }
     });
   }

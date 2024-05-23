@@ -6,7 +6,6 @@ import android.os.Looper
 import android.util.Log
 import info.xert.gecko_view_flutter.common.Offset
 import info.xert.gecko_view_flutter.common.Position
-import info.xert.gecko_view_flutter.common.ResultConsumer
 import info.xert.gecko_view_flutter.delegate.FlutterPromptDelegate
 import info.xert.gecko_view_flutter.delegate.FlutterNavigationDelegate
 import info.xert.gecko_view_flutter.delegate.FlutterScrollDelegate
@@ -58,6 +57,7 @@ internal class GeckoViewInstance(context: Context,
         session.promptDelegate = FlutterPromptDelegate(proxy)
         session.scrollDelegate = FlutterScrollDelegate()
         session.navigationDelegate = FlutterNavigationDelegate()
+
         session.permissionDelegate = object : GeckoSession.PermissionDelegate {
             override fun onContentPermissionRequest(
                     session: GeckoSession,
@@ -199,8 +199,8 @@ internal class GeckoViewInstance(context: Context,
     }
 
     fun runJsAsync(tabId: Int, script: String) {
-        val tabId = getInternalTabIdByTabId(tabId)
+        val browserTabId = getInternalTabIdByTabId(tabId)
                 ?: throw InternalError("Invalid session state! TabId not initialized");
-        runtimeController.hostJsExecutor.runAsync(script, tabId)
+        runtimeController.hostJsExecutor.runAsync(script, browserTabId)
     }
 }

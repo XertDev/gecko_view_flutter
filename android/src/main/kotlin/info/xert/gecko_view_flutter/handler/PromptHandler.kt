@@ -2,12 +2,16 @@ package info.xert.gecko_view_flutter.handler
 
 import info.xert.gecko_view_flutter.common.ResultConsumer
 
+interface PromptRequest {
+    fun toMap(): Map<String, Any?>
+}
+
 data class ChoicePromptRequest(
         val title: String?,
         val message: String?,
         val type: Int,
         val choices: List<Choice>
-) {
+): PromptRequest {
     data class Choice(
             val id: String,
             val disabled: Boolean,
@@ -30,7 +34,7 @@ data class ChoicePromptRequest(
         }
     }
 
-    fun toMap(): Map<String, Any?> {
+    override fun toMap(): Map<String, Any?> {
         val map = mutableMapOf<String, Any?>()
         map["title"] = title
         map["message"] = message
@@ -40,6 +44,18 @@ data class ChoicePromptRequest(
     }
 }
 
+data class AlertPromptRequest(
+        val title: String?,
+        val message: String?
+): PromptRequest {
+    override fun toMap(): Map<String, Any?> {
+        val map = mutableMapOf<String, Any?>()
+        map["title"] = title
+        map["message"] = message
+        return map
+    }
+}
 interface PromptHandler {
     fun onChoicePrompt(request: ChoicePromptRequest, callback: ResultConsumer<Any?>)
+    fun onAlertPrompt(request: AlertPromptRequest, callback: ResultConsumer<Any?>)
 }

@@ -13,8 +13,10 @@ import info.xert.gecko_view_flutter.common.ResultConsumer
 import info.xert.gecko_view_flutter.common.tryExtractSingleArgument
 import info.xert.gecko_view_flutter.common.tryExtractStructure
 import info.xert.gecko_view_flutter.common.unitResultConsumer
+import info.xert.gecko_view_flutter.handler.AlertPromptRequest
 import info.xert.gecko_view_flutter.handler.ChoicePromptRequest
 import info.xert.gecko_view_flutter.handler.PromptHandler
+import info.xert.gecko_view_flutter.handler.PromptRequest
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -189,8 +191,8 @@ class GeckoViewProxy(
     override fun dispose() {
     }
 
-    override fun onChoicePrompt(request: ChoicePromptRequest, callback: ResultConsumer<Any?>) {
-        invokeMethodUIThread(promptChannel, "choicePrompt", request.toMap(), object: MethodChannel.Result {
+    private fun handlePrompt(request: PromptRequest, callback: ResultConsumer<Any?>, type: String) {
+        invokeMethodUIThread(promptChannel, type, request.toMap(), object: MethodChannel.Result {
             override fun success(result: Any?) {
                 callback.success(result)
             }
@@ -203,5 +205,14 @@ class GeckoViewProxy(
                 callback.error("Internal", "Not implemented", null)
             }
         })
+    }
+
+    override fun onChoicePrompt(request: ChoicePromptRequest, callback: ResultConsumer<Any?>) {
+        handlePrompt(request, callback, "choicePrompt")
+    }
+
+    override fun onAlertPrompt(request: AlertPromptRequest, callback: ResultConsumer<Any?>) {
+        handlePrompt(request, callback, "alertPrompt")
+
     }
 }

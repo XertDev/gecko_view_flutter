@@ -2,6 +2,7 @@ package info.xert.gecko_view_flutter.delegate
 
 import info.xert.gecko_view_flutter.GeckoViewProxy
 import info.xert.gecko_view_flutter.common.ResultConsumer
+import info.xert.gecko_view_flutter.handler.AlertPromptRequest
 import info.xert.gecko_view_flutter.handler.ChoicePromptRequest
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoSession
@@ -29,9 +30,16 @@ class FlutterPromptDelegate(private val proxy: GeckoViewProxy): GeckoSession.Pro
         )
     }
 
+    private fun geckoAlertPromptToRequest(prompt: GeckoSession.PromptDelegate.AlertPrompt): AlertPromptRequest {
+        return AlertPromptRequest(
+                prompt.title,
+                prompt.message
+        )
+    }
+
     override fun onChoicePrompt(
             session: GeckoSession,
-            prompt: GeckoSession.PromptDelegate.ChoicePrompt): GeckoResult<GeckoSession.PromptDelegate.PromptResponse>? {
+            prompt: GeckoSession.PromptDelegate.ChoicePrompt): GeckoResult<PromptResponse> {
         val response: GeckoResult<PromptResponse> = GeckoResult<PromptResponse>()
 
         val request: ChoicePromptRequest = geckoChoicePromptToRequest(prompt)
@@ -46,6 +54,25 @@ class FlutterPromptDelegate(private val proxy: GeckoViewProxy): GeckoSession.Pro
                 } else {
                     response.complete(prompt.dismiss())
                 }
+            }
+
+            override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+                response.complete(prompt.dismiss())
+            }
+        })
+
+        return response
+    }
+
+    override fun onAlertPrompt(
+            session: GeckoSession,
+            prompt: GeckoSession.PromptDelegate.AlertPrompt): GeckoResult<PromptResponse> {
+        val response: GeckoResult<PromptResponse> = GeckoResult<PromptResponse>()
+
+        val request: AlertPromptRequest = geckoAlertPromptToRequest(prompt)
+        proxy.onAlertPrompt(request, object: ResultConsumer<Any?> {
+            override fun success(result: Any?) {
+                response.complete(prompt.dismiss())
             }
 
             override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
