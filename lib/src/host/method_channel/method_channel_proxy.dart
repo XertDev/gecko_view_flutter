@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:gecko_view_flutter/src/common/error.dart';
 import 'package:gecko_view_flutter/src/common/position.dart';
 import 'package:gecko_view_flutter/src/host/method_channel/method_channel_prompt_handler.dart';
+import 'package:gecko_view_flutter/src/common/cookie.dart';
 
 
 class MethodChannelProxy {
@@ -29,9 +31,29 @@ class MethodChannelProxy {
     return MethodChannel('${channelPrefix}_${viewId}_prompt');
   }
 
+  static const COOKIE_MANAGER_KEY = "Cookie Manager";
+
+  static void _handleCookieManagerException(PlatformException exception) {
+    if (exception.code == COOKIE_MANAGER_KEY) {
+      throw CookieException(exception.message ?? "");
+    }
+  }
+
   MethodChannelPromptHandler registerPromptHandler(int viewId) {
     var channel = openPromptViewChannel(viewId);
     return MethodChannelPromptHandler(channel);
+  }
+
+  static Future<T?> invokeMethodForPlugin<T>(String command, Map<String, Object?> args) async {
+    try {
+      var channel = openChannel();
+      debugPrint("Calling $command for plugin");
+
+      return await channel.invokeMethod<T>(command, args);
+    } on PlatformException catch (e) {
+      debugPrint("${e.code}: ${e.message}");
+      rethrow;
+    }
   }
 
   static Future<T?> invokeMethodForTab<T>(int viewId, int tabId, String command, Map<String, Object?> args) async {
@@ -149,13 +171,7 @@ class MethodChannelProxy {
   }
 
   Future<void> enableHostJSExecution() async {
-    try {
-      var channel = openChannel();
-      await channel.invokeMethod<void>("enableHostJSExecution", {});
-    } on PlatformException catch (e) {
-      debugPrint("${e.code}: ${e.message}");
-      rethrow;
-    }
+    await invokeMethodForPlugin("enableHostJSExecution", {});
   }
 
   Future<void> runJSAsync(int viewId, int tabId, String script) async {
@@ -164,13 +180,119 @@ class MethodChannelProxy {
     });
   }
 
-  Future<String> getPlatformVersion() async {
+  Future<void> enableCookieManager() async {
+    await invokeMethodForPlugin("enableCookieManager", {});
+  }
+
+  Future<Cookie> getCookie(
+    String? firstPartyDomain,
+    String name,
+    CookiePartitionKey? partitionKey,
+    String? storeId,
+    String url)
+  async {
     try {
-      var channel = openChannel();
-      return (await channel.invokeMethod<String>("getPlatformVersion"))!;
+      final result = await invokeMethodForPlugin<Map<Object?, Object?>>(
+          "getCookie", {
+        "firstPartyDomain": firstPartyDomain,
+        "name": name,
+        "partitionKey": partitionKey?.toMap(),
+        "storeId": storeId,
+        "url": url
+      });
+      return Cookie.fromMap(result!);
     } on PlatformException catch (e) {
-      debugPrint("${e.code}: ${e.message}");
+      _handleCookieManagerException(e);
       rethrow;
     }
+  }
+
+  Future<List<Cookie>> getAllCookies(
+    String? domain,
+    String? firstPartyDomain,
+    String? name,
+    CookiePartitionKey? partitionKey,
+    String? storeId,
+    String url)
+  async {
+    try {
+      final result = await invokeMethodForPlugin<List<Object?>>(
+          "getAllCookies", {
+        "domain": domain,
+        "firstPartyDomain": firstPartyDomain,
+        "name": name,
+        "partitionKey": partitionKey?.toMap(),
+        "storeId": storeId,
+        "url": url
+      });
+
+      return result!.map((entry) =>
+          Cookie.fromMap(entry as Map<Object?, Object?>)).toList();
+    } on PlatformException catch (e) {
+      _handleCookieManagerException(e);
+      rethrow;
+    }
+  }
+
+  Future<void> setCookie(
+    String? domain,
+    int? expirationDate,
+    String? firstPartyDomain,
+    bool? httpOnly,
+    String? name,
+    CookiePartitionKey? partitionKey,
+    String? path,
+    CookieSameSiteStatus? sameSite,
+    bool? secure,
+    String? storeId,
+    String url,
+    String? value)
+  async {
+    try {
+      await invokeMethodForPlugin(
+          "setCookie", {
+        "domain": domain,
+        "expirationDate": expirationDate,
+        "firstPartyDomain": firstPartyDomain,
+        "httpOnly": httpOnly,
+        "name": name,
+        "partitionKey": partitionKey?.toMap(),
+        "path": path,
+        "sameSite": sameSite?.value,
+        "secure": secure,
+        "storeId": storeId,
+        "url": url,
+        "value": value
+      });
+    } on PlatformException catch (e) {
+      _handleCookieManagerException(e);
+      rethrow;
+    }
+  }
+
+  Future<void> removeCookie(
+    String? firstPartyDomain,
+    String name,
+    CookiePartitionKey? partitionKey,
+    String? storeId,
+    String url)
+  async {
+    try {
+      await invokeMethodForPlugin(
+          "removeCookie", {
+        "firstPartyDomain": firstPartyDomain,
+        "name": name,
+        "partitionKey": partitionKey?.toMap(),
+        "storeId": storeId,
+        "url": url
+      });
+    } on PlatformException catch (e) {
+      _handleCookieManagerException(e);
+      rethrow;
+    }
+  }
+
+  Future<String> getPlatformVersion() async {
+    return (await invokeMethodForPlugin("getPlatformVersion", {}))!;
   }
 }

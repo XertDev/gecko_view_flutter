@@ -41,6 +41,7 @@ flutter:
   assets:
     - assets/webextension/host_js_execution/
     - assets/webextension/tab_data_initializer/
+    - assets/webextension/cookie_manager/
   #
   # For details regarding assets in packages, see
   # https://flutter.dev/assets-and-images/#from-packages

@@ -9,11 +9,15 @@ class NoArgumentException(message: String? = null, cause: Throwable? = null)
 class InvalidArgumentException(message: String? = null, cause: Throwable? = null)
     : Exception(message, cause)
 fun <T> tryExtractSingleArgument(call: MethodCall, nodeName: String): T {
+    return tryExtractOptionalSingleArgument(call, nodeName)!!
+}
+
+fun <T> tryExtractOptionalSingleArgument(call: MethodCall, nodeName: String): T? {
     if (!call.hasArgument(nodeName)) {
         throw NoArgumentException("No $nodeName provided")
     } else {
         try {
-            return call.argument<T>(nodeName)!!
+            return call.argument<T>(nodeName)
         } catch (e: ClassCastException) {
             throw InvalidArgumentException("Invalid type for $nodeName provided")
         }
@@ -21,12 +25,20 @@ fun <T> tryExtractSingleArgument(call: MethodCall, nodeName: String): T {
 }
 
 fun <T> tryExtractStructure(call: MethodCall, nodeName: String, companion: InputStructure<T>): T {
+    return tryExtractOptionalStructure(call, nodeName, companion)!!
+}
+
+fun <T> tryExtractOptionalStructure(call: MethodCall, nodeName: String, companion: InputStructure<T>): T? {
     if (!call.hasArgument(nodeName)) {
         throw NoArgumentException("No $nodeName provided")
     } else {
         try {
-            val structureMap = call.argument<Map<*, *>>(nodeName)!!
-            return companion.fromMap(structureMap)
+            val structureMap = call.argument<Map<*, *>>(nodeName)
+            if (structureMap == null) {
+                return null
+            } else {
+                return companion.fromMap(structureMap)
+            }
         } catch (e: ClassCastException) {
             throw InvalidArgumentException("Invalid type for $nodeName provided")
         }
