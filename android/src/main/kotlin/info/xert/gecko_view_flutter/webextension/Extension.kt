@@ -5,9 +5,11 @@ import android.os.Looper
 import android.util.Log
 import info.xert.gecko_view_flutter.common.ResultConsumer
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.WebExtension
+import org.mozilla.geckoview.WebExtension.PortDelegate
 
 abstract class Extension {
     abstract val TAG: String
@@ -18,8 +20,19 @@ abstract class Extension {
     var enabled: Boolean = false
         private set
 
+    var messageHandler: (Any) -> Unit = {
+        _: Any -> Unit
+    }
+
+    protected val portDelegate: WebExtension.PortDelegate = object: PortDelegate {
+        override fun onPortMessage(message: Any, port: WebExtension.Port) {
+            messageHandler(message)
+        }
+    }
+
     protected val messageDelegate: WebExtension.MessageDelegate = object: WebExtension.MessageDelegate {
         override fun onConnect(newPort: WebExtension.Port) {
+            newPort.setDelegate(portDelegate)
             port = newPort
         }
     }
