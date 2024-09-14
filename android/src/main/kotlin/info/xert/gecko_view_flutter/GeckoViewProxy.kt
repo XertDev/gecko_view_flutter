@@ -5,18 +5,21 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
+
 import info.xert.gecko_view_flutter.common.InvalidArgumentException
 import info.xert.gecko_view_flutter.common.NoArgumentException
 import info.xert.gecko_view_flutter.common.Offset
+import info.xert.gecko_view_flutter.common.FindRequest
+import info.xert.gecko_view_flutter.common.FindResult
 import info.xert.gecko_view_flutter.common.Position
 import info.xert.gecko_view_flutter.common.ResultConsumer
 import info.xert.gecko_view_flutter.common.tryExtractSingleArgument
 import info.xert.gecko_view_flutter.common.tryExtractStructure
-import info.xert.gecko_view_flutter.common.unitResultConsumer
 import info.xert.gecko_view_flutter.handler.AlertPromptRequest
 import info.xert.gecko_view_flutter.handler.ChoicePromptRequest
 import info.xert.gecko_view_flutter.handler.PromptHandler
 import info.xert.gecko_view_flutter.handler.PromptRequest
+
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -135,6 +138,27 @@ class GeckoViewProxy(
                             result.success(true)
                         }
 
+                        "findNext" -> {
+                            val request = tryExtractStructure(call, "request", FindRequest)
+                            instance.findNext(
+                                tabId, request,
+                                object: ResultConsumer<FindResult> {
+                                    override fun success(findResult: FindResult) {
+                                        result.success(findResult.toMap())
+                                    }
+
+                                    override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+                                        result.error(errorCode, errorMessage, errorDetails)
+                                    }
+                                }
+                            )
+                        }
+
+                        "findClear" -> {
+                            instance.findClear(tabId)
+                            result.success(true)
+                        }
+
                         else -> {
                             result.notImplemented()
                         }
@@ -213,6 +237,5 @@ class GeckoViewProxy(
 
     override fun onAlertPrompt(request: AlertPromptRequest, callback: ResultConsumer<Any?>) {
         handlePrompt(request, callback, "alertPrompt")
-
     }
 }

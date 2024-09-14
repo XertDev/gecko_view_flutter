@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:gecko_view_flutter/src/common/error.dart';
+import 'package:gecko_view_flutter/src/common/find_request.dart';
+import 'package:gecko_view_flutter/src/common/find_response.dart';
 import 'package:gecko_view_flutter/src/common/position.dart';
 import 'package:gecko_view_flutter/src/host/method_channel/method_channel_prompt_handler.dart';
 import 'package:gecko_view_flutter/src/common/cookie.dart';
@@ -168,6 +170,20 @@ class MethodChannelProxy {
       "smooth": smooth,
       "position": position.toMap()
     });
+  }
+
+  Future<GeckoFindResult> findNext(int viewId, int tabId, GeckoFindRequest request) async {
+    final result = await invokeMethodForTab<Map<Object?, Object?>>(
+      viewId, tabId,
+      "findNext", {
+        "request": request.toMap()
+      }
+    );
+    return GeckoFindResult.fromMap(result!);
+  }
+
+  Future<void> findClear(int viewId, int tabId) async {
+    await invokeMethodForTab(viewId, tabId, "findClear", {});
   }
 
   Future<void> enableHostJSExecution() async {

@@ -1,4 +1,5 @@
 package info.xert.gecko_view_flutter.common
+
 data class Position(val x: Int, val y: Int): OutputStructure {
     override fun toMap(): Map<String, Any?> {
         val map = mutableMapOf<String, Any?>()

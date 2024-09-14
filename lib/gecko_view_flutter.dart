@@ -2,6 +2,7 @@ import 'package:gecko_view_flutter/src/common/cookie.dart';
 import 'package:gecko_view_flutter/src/host/method_channel/method_channel_proxy.dart';
 
 export 'src/gecko_view_controller.dart';
+export 'package:gecko_view_flutter/src/common/find_request.dart';
 export 'src/common/error.dart';
 
 class GeckoCookieManager {

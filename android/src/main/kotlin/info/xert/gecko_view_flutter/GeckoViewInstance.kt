@@ -4,8 +4,12 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import info.xert.gecko_view_flutter.common.FindDirection
 import info.xert.gecko_view_flutter.common.Offset
 import info.xert.gecko_view_flutter.common.Position
+import info.xert.gecko_view_flutter.common.ResultConsumer
+import info.xert.gecko_view_flutter.common.FindRequest
+import info.xert.gecko_view_flutter.common.FindResult
 import info.xert.gecko_view_flutter.delegate.FlutterPromptDelegate
 import info.xert.gecko_view_flutter.delegate.FlutterNavigationDelegate
 import info.xert.gecko_view_flutter.delegate.FlutterScrollDelegate
@@ -195,5 +199,64 @@ internal class GeckoViewInstance(context: Context,
         val browserTabId = getInternalTabIdByTabId(tabId)
                 ?: throw InternalError("Invalid session state! TabId not initialized");
         runtimeController.hostJsExecutor.runAsync(script, browserTabId)
+    }
+
+    fun findNext(tabId: Int, request: FindRequest, callback: ResultConsumer<FindResult>) {
+        val session = getSessionByTabId(tabId)
+        val finder = session.finder
+
+        var searchFlags: Int = 0
+        if (request.direction == FindDirection.BACKWARDS) {
+            searchFlags = searchFlags or GeckoSession.FINDER_FIND_BACKWARDS
+        }
+        if (request.matchCase) {
+            searchFlags = searchFlags or GeckoSession.FINDER_FIND_MATCH_CASE
+        }
+        if (request.wholeWord) {
+            searchFlags = searchFlags or GeckoSession.FINDER_FIND_WHOLE_WORD
+        }
+        if (request.linksOnly) {
+            searchFlags = searchFlags or GeckoSession.FINDER_FIND_LINKS_ONLY
+        }
+
+        var displayFlags: Int = 0
+        if (request.highlightAll) {
+            displayFlags = displayFlags or GeckoSession.FINDER_DISPLAY_HIGHLIGHT_ALL
+        }
+        if (request.dimPage) {
+            displayFlags = displayFlags or GeckoSession.FINDER_DISPLAY_DIM_PAGE
+        }
+        if (request.drawLinkOutline) {
+            displayFlags = displayFlags or GeckoSession.FINDER_DISPLAY_DRAW_LINK_OUTLINE
+        }
+
+        finder.displayFlags = displayFlags
+        finder.find(request.searchString, searchFlags).accept (
+            { result ->
+                if (result != null) {
+                    callback.success(FindResult(
+                        result.found, result.current, result.linkUri.orEmpty(), result.total, result.wrapped
+                    ))
+                } else {
+                    callback.success(
+                        FindResult(
+                        false, 0, "", 0, false
+                    )
+                    )
+                }
+            },
+            {
+                e ->
+                    Log.e(TAG, "Failed to perform find")
+                callback.error(TAG, "Failed to perform find", e)
+            }
+        )
+    }
+
+    fun findClear(tabId: Int) {
+        val session = getSessionByTabId(tabId)
+        val finder = session.finder
+
+        finder.clear()
     }
 }

@@ -1,3 +1,5 @@
+import 'common/find_request.dart';
+import 'common/find_response.dart';
 import 'common/position.dart';
 import 'delegate/prompt_delegate.dart';
 
@@ -93,17 +95,37 @@ class GeckoJavascriptController {
   }
 }
 
+class GeckoFindController {
+  final int _viewId;
+  final int _tabId;
+
+  GeckoFindController._(
+      this._viewId,
+      this._tabId
+  );
+
+  Future<GeckoFindResult> find(GeckoFindRequest request) async {
+    return await MethodChannelProxy.instance.findNext(_viewId, _tabId, request);
+  }
+
+  Future<void> clear() async {
+    await MethodChannelProxy.instance.findClear(_viewId, _tabId);
+  }
+}
+
 class GeckoTabController {
   final int _viewId;
   final int _tabId;
 
   late final GeckoJavascriptController _javascriptController;
+  late final GeckoFindController _findController;
 
   GeckoTabController._(
       this._viewId,
       this._tabId
       ) {
     _javascriptController = GeckoJavascriptController._(_viewId, _tabId);
+    _findController = GeckoFindController._(_viewId, _tabId);
   }
 
   int id() {
@@ -112,6 +134,10 @@ class GeckoTabController {
 
   GeckoJavascriptController javascriptController() {
     return _javascriptController;
+  }
+
+  GeckoFindController findController() {
+    return _findController;
   }
 
   Future<bool> isActive() async {

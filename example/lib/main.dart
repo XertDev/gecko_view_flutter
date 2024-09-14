@@ -32,6 +32,12 @@ class _MyAppState extends State<MyApp> {
     super.initState();
   }
 
+  void showInfoToast(BuildContext context, String message)  {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+    ));
+  }
+
   void showOperationFailedToast(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('Failed to perform operation: $message'),
@@ -180,6 +186,31 @@ class _MyAppState extends State<MyApp> {
                     showOperationFailedToast(context, e.message);
                   }
                 }
+              },
+            ),
+            ListTile(
+              title: const Text("Find"),
+              onTap: () async {
+                final activeTab = await controller?.getActiveTab();
+                final findController = activeTab?.findController();
+                final result = await findController?.find(const GeckoFindRequest(
+                  searchString: "isolate",
+                  drawLinkOutline: true,
+                  highlightAll: true
+                ));
+                showInfoToast(context,
+                    "Found ${result?.total} occurrences."
+                    " Moving to ${result?.occurrenceOffset}."
+                    " Wrapped: ${result?.wrapped}"
+                );
+              }
+            ),
+            ListTile(
+              title: const Text("Clear find"),
+              onTap: () async {
+                final activeTab = await controller?.getActiveTab();
+                final findController = activeTab?.findController();
+                await findController?.clear();
               },
             )
           ],
