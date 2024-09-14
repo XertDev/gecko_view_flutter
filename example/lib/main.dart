@@ -49,7 +49,7 @@ class _MyAppState extends State<MyApp> {
           this.controller = controller;
           tab = await this.controller?.createTab();
           tab?.activate();
-          await tab?.openURI(Uri.parse('https://dart.dev/'));
+          await tab?.openURI(Uri.parse('https://google.com/'));
         },
       ),
       bottomNavigationBar: BottomAppBar(
